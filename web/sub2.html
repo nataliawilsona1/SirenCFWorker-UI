@@ -198,25 +198,24 @@
       const windowContainer = document.getElementById("container-window");
       const windowInfoContainer = document.getElementById("container-window-info");
   
-      // Ambil kode negara dari query string (?cc=PL) atau default ke "PL"
       const urlParams = new URLSearchParams(window.location.search);
       let proxyCountry = urlParams.get('cc') || "PL";
       
       // --- Variabel State Aplikasi ---
       let availableCountries = [];
       let isDomainListFetched = false;
-      let rawConfig = ""; // Menyimpan konfigurasi mentah yang akan disalin
+      let rawConfig = "";
   
       // --- Fungsi Utama untuk Memuat Data Proxy ---
   
       function loadSidebarFlags(data) {
           const sidebar = document.getElementById('sidebar-flags');
-          sidebar.innerHTML = ''; // Kosongkan sidebar sebelum diisi
+          sidebar.innerHTML = '';
           availableCountries = Object.keys(data);
   
           availableCountries.forEach(cc => {
               const a = document.createElement('a');
-              a.href = `?cc=${cc}`; // Cukup ubah query string, tidak perlu path
+              a.href = `?cc=${cc}`;
               a.className = "py-1";
               a.innerHTML = `<img width=20 src="https://hatscripts.github.io/circle-flags/flags/${cc.toLowerCase()}.svg" alt="${cc}" />`;
               sidebar.appendChild(a);
@@ -224,77 +223,71 @@
       }
   
       function loadProxyList(data) {
-    const proxies = data[proxyCountry] || [];
-    const container = document.getElementById('proxy-list-container');
-    container.innerHTML = ''; // Kosongkan kontainer sebelum diisi
-
-    if (proxies.length === 0) {
-        container.innerHTML = `<div class="col-span-full text-center text-red-400">No proxy found for country code <b>${proxyCountry}</b></div>`;
-        return;
-    }
-
-    proxies.forEach((proxyInfo, idx) => {
-          // --- Ekstrak Data dari Objek Proxy ---
-          const [ip, port] = proxyInfo.proxy.split(':');
-          const serverName = proxyInfo.name;
+          const proxies = data[proxyCountry] || [];
+          const container = document.getElementById('proxy-list-container');
+          container.innerHTML = '';
   
-          // --- Variabel untuk Membuat Konfigurasi ---
-          const uuid = "245ad464-108b-42c2-bc68-0d98a8b1a690";
-          const hostAndSni = "nautica.zerostore.tech";
-          const path = `/${ip}-${port}`;
-          const remark = `${idx + 1} ${proxyCountry.toUpperCase()} ${serverName}`;
-          const ssCredentials = btoa(`none:${uuid}`); // `none:uuid` di-encode ke base64
+          if (proxies.length === 0) {
+              container.innerHTML = `<div class="col-span-full text-center text-red-400">No proxy found for country code <b>${proxyCountry}</b></div>`;
+              return;
+          }
   
-          // --- Generate Semua Jenis Konfigurasi ---
-          // 1. TLS (Port 443)
-          const vlessTLS = `vless://${uuid}@${hostAndSni}:443?encryption=none&type=ws&host=${hostAndSni}&path=${encodeURIComponent(path)}&security=tls&sni=${hostAndSni}#${encodeURIComponent(remark + ' WS TLS')}`;
-          const trojanTLS = `trojan://${uuid}@${hostAndSni}:443?encryption=none&type=ws&host=${hostAndSni}&path=${encodeURIComponent(path)}&security=tls&sni=${hostAndSni}#${encodeURIComponent(remark + ' WS TLS')}`;
-          const ssTLS = `ss://${ssCredentials}@${hostAndSni}:443?plugin=v2ray-plugin%3Btls%3Bhost%3D${hostAndSni}%3Bpath%3D${encodeURIComponent(path)}#${encodeURIComponent(remark + ' WS TLS')}`;
+          proxies.forEach((proxyInfo, idx) => {
+              const [ip, port] = proxyInfo.proxy.split(':');
+              const serverName = proxyInfo.name;
   
-          // 2. Non-TLS (Port 80)
-          const vlessNTLS = `vless://${uuid}@${hostAndSni}:80?encryption=none&type=ws&host=${hostAndSni}&path=${encodeURIComponent(path)}&security=none#${encodeURIComponent(remark + ' WS NTLS')}`;
-          const trojanNTLS = `trojan://${uuid}@${hostAndSni}:80?encryption=none&type=ws&host=${hostAndSni}&path=${encodeURIComponent(path)}&security=none#${encodeURIComponent(remark + ' WS NTLS')}`;
-          const ssNTLS = `ss://${ssCredentials}@${hostAndSni}:80?plugin=v2ray-plugin%3Bhost%3D${hostAndSni}%3Bpath%3D${encodeURIComponent(path)}#${encodeURIComponent(remark + ' WS NTLS')}`;
+              const uuid = "245ad464-108b-42c2-bc68-0d98a8b1a690";
+              const hostAndSni = "nautica.zerostore.tech";
+              const path = `/${ip}-${port}`;
+              const remark = `${idx + 1} ${proxyCountry.toUpperCase()} ${serverName}`;
+              const ssCredentials = btoa(`none:${uuid}`);
   
-          // --- Buat Kartu HTML ---
-          const card = document.createElement('div');
-          card.className = "lozad scale-95 mb-4 bg-white dark:bg-slate-800 transition-all duration-300 rounded-lg p-6 flex flex-col shadow-md hover:shadow-lg border border-slate-200 dark:border-slate-700 hover:scale-105";
-          
-          card.innerHTML = `
-              <div class="absolute -translate-y-11 -translate-x-2 border-4 border-white dark:border-slate-800 rounded-full overflow-hidden">
-                  <img width="48" src="https://hatscripts.github.io/circle-flags/flags/${proxyCountry.toLowerCase()}.svg" alt="${proxyCountry}" />
-              </div>
-              <div class="flex-grow">
-                  <div id="ping-${idx}" data-target="${ip}:${port}" class="animate-pulse text-xs font-semibold text-slate-500 dark:text-slate-400 text-right">Idle ${ip}:${port}</div>
-              </div>
-              <div class="rounded-lg py-4 px-4 bg-slate-50 dark:bg-slate-700/50 flex-grow mt-4">
-                  <h5 class="font-bold text-lg text-slate-800 dark:text-slate-100 mb-1 overflow-x-scroll scrollbar-hide text-nowrap">${serverName}</h5>
-                  <div class="text-slate-600 dark:text-slate-300 text-sm">
-                      <p>IP: ${ip}</p>
-                      <p>Port: ${port}</p>
-                      <div id="container-region-check-${idx}">
-                          <input id="config-sample-${idx}" class="hidden" type="text" value="${trojanTLS}">
+              const vlessTLS = `vless://${uuid}@${hostAndSni}:443?encryption=none&type=ws&host=${hostAndSni}&path=${encodeURIComponent(path)}&security=tls&sni=${hostAndSni}#${encodeURIComponent(remark + ' WS TLS')}`;
+              const trojanTLS = `trojan://${uuid}@${hostAndSni}:443?encryption=none&type=ws&host=${hostAndSni}&path=${encodeURIComponent(path)}&security=tls&sni=${hostAndSni}#${encodeURIComponent(remark + ' WS TLS')}`;
+              const ssTLS = `ss://${ssCredentials}@${hostAndSni}:443?plugin=v2ray-plugin%3Btls%3Bhost%3D${hostAndSni}%3Bpath%3D${encodeURIComponent(path)}#${encodeURIComponent(remark + ' WS TLS')}`;
+  
+              const vlessNTLS = `vless://${uuid}@${hostAndSni}:80?encryption=none&type=ws&host=${hostAndSni}&path=${encodeURIComponent(path)}&security=none#${encodeURIComponent(remark + ' WS NTLS')}`;
+              const trojanNTLS = `trojan://${uuid}@${hostAndSni}:80?encryption=none&type=ws&host=${hostAndSni}&path=${encodeURIComponent(path)}&security=none#${encodeURIComponent(remark + ' WS NTLS')}`;
+              const ssNTLS = `ss://${ssCredentials}@${hostAndSni}:80?plugin=v2ray-plugin%3Bhost%3D${hostAndSni}%3Bpath%3D${encodeURIComponent(path)}#${encodeURIComponent(remark + ' WS NTLS')}`;
+              
+              const card = document.createElement('div');
+              card.className = "lozad scale-95 mb-4 bg-white dark:bg-slate-800 transition-all duration-300 rounded-lg p-6 flex flex-col shadow-md hover:shadow-lg border border-slate-200 dark:border-slate-700 hover:scale-105";
+              
+              card.innerHTML = `
+                  <div class="absolute -translate-y-11 -translate-x-2 border-4 border-white dark:border-slate-800 rounded-full overflow-hidden">
+                      <img width="48" src="https://hatscripts.github.io/circle-flags/flags/${proxyCountry.toLowerCase()}.svg" alt="${proxyCountry}" />
+                  </div>
+                  <div class="flex-grow">
+                      <div id="ping-${idx}" data-target="${proxyInfo.proxy}" class="animate-pulse text-xs font-semibold text-slate-500 dark:text-slate-400 text-right">Idle ${ip}:${port}</div>
+                  </div>
+                  <div class="rounded-lg py-4 px-4 bg-slate-50 dark:bg-slate-700/50 flex-grow mt-4">
+                      <h5 class="font-bold text-lg text-slate-800 dark:text-slate-100 mb-1 overflow-x-scroll scrollbar-hide text-nowrap">${serverName}</h5>
+                      <div class="text-slate-600 dark:text-slate-300 text-sm">
+                          <p>IP: ${ip}</p>
+                          <p>Port: ${port}</p>
+                          <div id="container-region-check-${idx}">
+                              <input id="config-sample-${idx}" class="hidden" type="text" value="${trojanTLS}">
+                          </div>
                       </div>
                   </div>
-              </div>
-              <div class="flex flex-col gap-2 mt-4 text-sm">
-                  <div class="flex gap-2 justify-around w-full">
-                      <button class="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-md p-2 w-full text-white font-semibold transition-colors duration-200" onclick="showCopyOptions('${trojanTLS}')">TROJAN TLS</button>
-                      <button class="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-md p-2 w-full text-white font-semibold transition-colors duration-200" onclick="showCopyOptions('${vlessTLS}')">VLESS TLS</button>
+                  <div class="flex flex-col gap-2 mt-4 text-sm">
+                      <div class="flex gap-2 justify-around w-full">
+                          <button class="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-md p-2 w-full text-white font-semibold transition-colors duration-200" onclick="showCopyOptions('${trojanTLS}')">TROJAN TLS</button>
+                          <button class="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-md p-2 w-full text-white font-semibold transition-colors duration-200" onclick="showCopyOptions('${vlessTLS}')">VLESS TLS</button>
+                      </div>
+                      <div class="flex gap-2 justify-around w-full">
+                          <button class="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-md p-2 w-full text-white font-semibold transition-colors duration-200" onclick="showCopyOptions('${ssTLS}')">SS TLS</button>
+                          <button class="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-md p-2 w-full text-white font-semibold transition-colors duration-200" onclick="showCopyOptions('${trojanNTLS}')">TROJAN NTLS</button>
+                      </div>
+                      <div class="flex gap-2 justify-around w-full">
+                          <button class="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-md p-2 w-full text-white font-semibold transition-colors duration-200" onclick="showCopyOptions('${vlessNTLS}')">VLESS NTLS</button>
+                          <button class="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-md p-2 w-full text-white font-semibold transition-colors duration-200" onclick="showCopyOptions('${ssNTLS}')">SS NTLS</button>
+                      </div>
                   </div>
-                  <div class="flex gap-2 justify-around w-full">
-                      <button class="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-md p-2 w-full text-white font-semibold transition-colors duration-200" onclick="showCopyOptions('${ssTLS}')">SS TLS</button>
-                      <button class="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-md p-2 w-full text-white font-semibold transition-colors duration-200" onclick="showCopyOptions('${trojanNTLS}')">TROJAN NTLS</button>
-                  </div>
-                  <div class="flex gap-2 justify-around w-full">
-                      <button class="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-md p-2 w-full text-white font-semibold transition-colors duration-200" onclick="showCopyOptions('${vlessNTLS}')">VLESS NTLS</button>
-                      <button class="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-md p-2 w-full text-white font-semibold transition-colors duration-200" onclick="showCopyOptions('${ssNTLS}')">SS NTLS</button>
-                  </div>
-              </div>
-          `;
-          container.appendChild(card);
-      });
-  }
+              `;
+              container.appendChild(card);
+          });
+      }
   
       async function loadAll() {
           try {
@@ -302,23 +295,17 @@
               if (!res.ok) throw new Error('proxylist.json not found');
               const data = await res.json();
   
-              // Update sidebar flags
               loadSidebarFlags(data);
   
-              // Jika cc di query tidak ada di proxylist.json, pakai country pertama
               if (!data[proxyCountry]) {
                   proxyCountry = Object.keys(data)[0] || "PL";
-                  // Update URL tanpa reload halaman
                   const newUrl = `${window.location.pathname}?cc=${proxyCountry}`;
                   window.history.replaceState({ path: newUrl }, '', newUrl);
               }
   
-              // Update grid proxy
               loadProxyList(data);
-  
-              // Setelah daftar proxy dimuat, jalankan pengecekan ping
               checkAllProxies();
-  
+              checkRegion(); // Panggil fungsi check region di sini
           } catch (e) {
               console.error("Failed to load proxy list:", e);
               document.getElementById('proxy-list-container').innerHTML = `<div class="col-span-full text-center text-red-400">Gagal memuat proxylist.json</div>`;
@@ -329,7 +316,6 @@
   
       async function pingProxy(pingElement, target) {
           if (!target) return;
-  
           pingElement.textContent = "Checking...";
           pingElement.classList.remove('text-green-600', 'text-red-600', 'animate-pulse');
   
@@ -361,6 +347,30 @@
               pingProxy(element, target);
           });
       }
+  
+      function checkRegion() {
+          for (let i = 0; ; i++) {
+              const containerRegionCheck = document.getElementById("container-region-check-" + i);
+              const configSampleEl = document.getElementById("config-sample-" + i);
+              if (!containerRegionCheck || !configSampleEl) break;
+  
+              const configSample = configSampleEl.value.trim();
+              if (!configSample) continue;
+  
+              fetch(`https://api.foolvpn.me/regioncheck?config=${encodeURIComponent(configSample)}`)
+              .then(res => {
+                  if (res.ok) return res.json();
+                  throw new Error('Region check failed');
+              })
+              .then(results => {
+                  containerRegionCheck.innerHTML += "<hr class='my-1 border-slate-200 dark:border-slate-600'>";
+                  results.forEach(result => {
+                      containerRegionCheck.innerHTML += `<p>${result.name}: ${result.region}</p>`;
+                  });
+              })
+              .catch(error => console.error(`Region check for index ${i} failed:`, error));
+          }
+      }
       
       async function checkGeoip() {
           const containerIP = document.getElementById("container-info-ip");
@@ -388,9 +398,7 @@
       }
   
       function copyToClipboardAsRaw() {
-          navigator.clipboard.writeText(rawConfig).then(() => {
-              showNotification();
-          });
+          navigator.clipboard.writeText(rawConfig).then(() => showNotification());
       }
   
       async function copyToClipboardAsTarget(target) {
@@ -400,7 +408,6 @@
                   method: "POST",
                   body: JSON.stringify({ url: rawConfig, format: target, template: "cf" }),
               });
-  
               if (res.ok) {
                   const configText = await res.text();
                   navigator.clipboard.writeText(configText).then(() => {
@@ -418,9 +425,7 @@
       
       function showNotification() {
           notification.classList.remove("opacity-0");
-          setTimeout(() => {
-              notification.classList.add("opacity-0");
-          }, 2000);
+          setTimeout(() => notification.classList.add("opacity-0"), 2000);
       }
       
       function navigateTo(link) {
@@ -450,7 +455,7 @@
           document.documentElement.classList.toggle("dark");
       }
       
-      // --- Fungsi Lain (Wildcard Domain, dll) ---
+      // --- Fungsi Lain (Wildcard Domain) ---
   
       async function getDomainList() {
           if (isDomainListFetched) return;
@@ -461,46 +466,40 @@
           domainListContainer.innerHTML = "";
   
           try {
-              const url = `https://${rootDomain}/api/v1/domains/get`;
-              const res = await fetch(url);
+              const res = await fetch(`https://${rootDomain}/api/v1/domains/get`);
               if (res.ok) {
                   windowInfoContainer.innerText = "Done!";
                   const respJson = await res.json();
                   respJson.forEach(domain => {
-                      const domainElement = document.createElement("p");
-                      domainElement.className = "w-full bg-amber-400 rounded-md p-1 text-center";
-                      domainElement.innerText = domain;
-                      domainListContainer.appendChild(domainElement);
+                      const p = document.createElement("p");
+                      p.className = "w-full bg-amber-400 rounded-md p-1 text-center";
+                      p.innerText = domain;
+                      domainListContainer.appendChild(p);
                   });
               } else {
                   windowInfoContainer.innerText = `Failed! Status: ${res.status}`;
               }
           } catch (error) {
               windowInfoContainer.innerText = "Failed to fetch domains!";
-              console.error("getDomainList error:", error);
           }
       }
   
       async function registerDomain() {
-          const domainInputElement = document.getElementById("new-domain-input");
-          const rawDomain = domainInputElement.value.trim().toLowerCase();
-  
-          if (!rawDomain || rawDomain.includes(" ") || !rawDomain.includes(".")) {
+          const inputEl = document.getElementById("new-domain-input");
+          const rawDomain = inputEl.value.trim().toLowerCase();
+          if (!rawDomain || !rawDomain.includes(".")) {
               windowInfoContainer.innerText = "Invalid domain format!";
               return;
           }
   
-          const domain = `${rawDomain}.${rootDomain}`;
           windowInfoContainer.innerText = "Pushing request...";
-  
           try {
-              const url = `https://${rootDomain}/api/v1/domains/put?domain=${domain}`;
-              const res = await fetch(url);
+              const res = await fetch(`https://${rootDomain}/api/v1/domains/put?domain=${rawDomain}.${rootDomain}`);
               if (res.ok) {
                   windowInfoContainer.innerText = "Done!";
-                  domainInputElement.value = "";
+                  inputEl.value = "";
                   isDomainListFetched = false;
-                  getDomainList(); // Refresh list
+                  getDomainList();
               } else if (res.status === 409) {
                   windowInfoContainer.innerText = "Domain exists!";
               } else {
@@ -508,7 +507,6 @@
               }
           } catch (error) {
               windowInfoContainer.innerText = "Request failed!";
-              console.error("registerDomain error:", error);
           }
       }
   
@@ -518,7 +516,7 @@
           loadAll();
           checkGeoip();
           checkRegion();
-  
+          
           const observer = lozad(".lozad", {
               load: (el) => el.classList.remove("scale-95"),
           });
@@ -528,14 +526,9 @@
       window.onscroll = () => {
           const paginationContainer = document.getElementById("container-pagination");
           if (!paginationContainer) return;
-  
-          const isScrolledToBottom = window.innerHeight + Math.round(window.scrollY) >= document.body.offsetHeight;
-          if (isScrolledToBottom) {
-              paginationContainer.classList.remove("-translate-y-6");
-          } else {
-              paginationContainer.classList.add("-translate-y-6");
-          }
+          const isScrolledToBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 50;
+          paginationContainer.classList.toggle("-translate-y-6", !isScrolledToBottom);
       };
-    </script>
+  </script>
   </body>
 </html>
