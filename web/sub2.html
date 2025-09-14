@@ -196,7 +196,7 @@
 
         availableCountries.forEach(cc => {
           const a = document.createElement('a');
-          a.href = `/sub?cc=${cc}`;
+          a.href = `/sub?cc=${cc}`; // atau "?cc=" + cc jika di root
           a.className = "py-1";
           a.innerHTML = `<img width=20 src="https://hatscripts.github.io/circle-flags/flags/${cc.toLowerCase()}.svg" />`;
           sidebar.appendChild(a);
