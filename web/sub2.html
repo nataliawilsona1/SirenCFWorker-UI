@@ -238,7 +238,7 @@
 
       async function loadAll() {
         try {
-          const res = await fetch('/proxylist.json');
+          const res = await fetch('https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/kvProxyList.json');
           if (!res.ok) throw new Error('proxylist.json not found');
           const data = await res.json();
 
