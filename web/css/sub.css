@@ -168,7 +168,12 @@ select.form-control {
   background-repeat: no-repeat;
   background-position: right 0.8rem center;
   background-size: 1rem;
-  padding-right: 2.2rem;
+  padding-right: 2.2rem;  
+}
+
+select.form-control option {
+  background: #18142b;
+  color: #fff;
 }
 
 .btn {
@@ -668,3 +673,4 @@ select.form-control {
   margin-top: 0.3rem;
   font-style: italic;
 }
+
