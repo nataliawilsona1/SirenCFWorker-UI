@@ -277,8 +277,6 @@
           document.getElementById('proxy-list-container').innerHTML = `<div class="col-span-full text-center text-red-400">Gagal load proxylist.json</div>`;
         }
       }
-
-      window.addEventListener('DOMContentLoaded', loadAll);
     </script>
 
     <script>
@@ -507,6 +505,7 @@
       }
     
       window.onload = () => {
+        loadAll();
         checkGeoip();
         checkProxy();
         // checkRegion();
