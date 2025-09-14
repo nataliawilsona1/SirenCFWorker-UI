@@ -40,6 +40,13 @@ const copyLinkBtn = document.getElementById("copyLink");
 function generateUUIDv4() {
   return crypto.randomUUID();
 }
+configTypeSelect.addEventListener("change", () => {
+  if (configTypeSelect.value === "vmess") {
+    uuidInput.value = generateUUIDv4();
+  } else {
+    uuidInput.value = CONFIG.defaultUuid;
+  }
+});
 async function copyToClipboard(_0x3a1862) {
   try {
     await navigator.clipboard.writeText(_0x3a1862);
@@ -557,3 +564,4 @@ function shuffleArray(_0xd9add7) {
   }
   return _0xd9add7;
 }
+
