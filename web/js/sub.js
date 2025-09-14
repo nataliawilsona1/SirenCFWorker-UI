@@ -2,7 +2,7 @@ const CONFIG = {
   'proxyListUrl': "https://raw.githubusercontent.com/AFRcloud/ProxyList/refs/heads/main/ProxyList.txt",
   'apiCheckUrl': "https://api.jb8fd7grgd.workers.dev/",
   'mainDomains': ["lilodev.my.id"],
-  'defaultUuid': 'fccdaaae-af39-41a7-9fde-fd32a48278cf',
+  'defaultUuid': '504688e3-71ef-43a6-86c8-e4ab7bb5be55',
   'maxProxies': 0x32,
   'defaultProxyCount': 0x5,
   'pathTemplate': "/Free/{ip}-{port}"
@@ -568,5 +568,6 @@ function shuffleArray(_0xd9add7) {
   }
   return _0xd9add7;
 }
+
 
 
