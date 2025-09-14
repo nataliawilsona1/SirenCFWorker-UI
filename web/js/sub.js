@@ -42,9 +42,13 @@ function generateUUIDv4() {
 }
 configTypeSelect.addEventListener("change", () => {
   if (configTypeSelect.value === "vmess") {
-    uuidInput.value = generateUUIDv4();
-  } else {
     uuidInput.value = CONFIG.defaultUuid;
+    uuidInput.readOnly = true;
+    generateUuidBtn.style.display = "none";
+  } else {
+    uuidInput.value = generateUUIDv4();
+    uuidInput.readOnly = false;
+    generateUuidBtn.style.display = "";
   }
 });
 async function copyToClipboard(_0x3a1862) {
@@ -564,4 +568,5 @@ function shuffleArray(_0xd9add7) {
   }
   return _0xd9add7;
 }
+
 
