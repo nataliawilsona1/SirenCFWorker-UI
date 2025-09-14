@@ -13,7 +13,7 @@ const defaultProxyUrl = "https://raw.githubusercontent.com/AFRcloud/ProxyList/re
 
 const serverDomains = ["lilodev.my.id"]
 let selectedServerDomain = serverDomains[0] // Default to first domain
-const defaultUUID = "fccdaaae-af39-41a7-9fde-fd32a48278cf"
+const defaultUUID = "504688e3-71ef-43a6-86c8-e4ab7bb5be55"
 const itemsPerPage = 10
 let currentPage = 1
 
@@ -1047,4 +1047,5 @@ function loadProxyList(url) {
     }
   })()
 }
+
 
