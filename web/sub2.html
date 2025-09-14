@@ -191,346 +191,325 @@
       </div>
     </footer>
 
-    <!-- Script dinamis flags & proxylist -->
     <script>
-      // Ambil kode negara dari query string (?cc=PL)
-      const urlParams = new URLSearchParams(window.location.search);
-      let proxyCountry = urlParams.get('cc') || "PL";
-      let availableCountries = [];
-
-      async function loadSidebarFlags(data) {
-        const sidebar = document.getElementById('sidebar-flags');
-        sidebar.innerHTML = '';
-        availableCountries = Object.keys(data);
-
-        availableCountries.forEach(cc => {
-          const a = document.createElement('a');
-          a.href = `/sub?cc=${cc}`;
-          a.className = "py-1";
-          a.innerHTML = `<img width=20 src="https://hatscripts.github.io/circle-flags/flags/${cc.toLowerCase()}.svg" />`;
-          sidebar.appendChild(a);
-        });
-      }
-
-      async function loadProxyList(data) {
-        const proxies = data[proxyCountry] || [];
-        const container = document.getElementById('proxy-list-container');
-        container.innerHTML = '';
-
-        if (proxies.length === 0) {
-          container.innerHTML = `<div class="col-span-full text-center text-red-400">No proxy found for country code <b>${proxyCountry}</b></div>`;
-          return;
-        }
-
-        proxies.forEach((proxy, idx) => {
-          const [ip, port] = proxy.split(':');
-          const vlessTLS = `vless://245ad464-108b-42c2-bc68-0d98a8b1a690@nautica.zerostore.tech:443?encryption=none&type=ws&host=nautica.zerostore.tech&path=%2F${ip}-${port}&security=tls&sni=nautica.zerostore.tech#VLESS-TLS-${ip}-${port}`;
-          const trojanTLS = `trojan://245ad464-108b-42c2-bc68-0d98a8b1a690@nautica.zerostore.tech:443?encryption=none&type=ws&host=nautica.zerostore.tech&path=%2F${ip}-${port}&security=tls&sni=nautica.zerostore.tech#TROJAN-TLS-${ip}-${port}`;
-          // dst, buat pola config lain sesuai kebutuhan
-        
-          const card = document.createElement('div');
-          card.className = "lozad scale-95 mb-4 bg-white dark:bg-slate-800 transition-all duration-300 rounded-lg p-6 flex flex-col shadow-md hover:shadow-lg border border-slate-200 dark:border-slate-700 hover:scale-105";
-          card.innerHTML = `
-            <div id="countryFlag" class="absolute -translate-y-11 -translate-x-2 border-4 border-white dark:border-slate-800 rounded-full overflow-hidden">
-              <img width="48" src="https://hatscripts.github.io/circle-flags/flags/${proxyCountry.toLowerCase()}.svg" />
-            </div>
-            <div class="flex-grow">
-              <div id="ping-${idx}" class="animate-pulse text-xs font-semibold text-slate-500 dark:text-slate-400 text-right">Idle ${ip}:${port}</div>
-            </div>
-            <div class="rounded-lg py-4 px-4 bg-slate-50 dark:bg-slate-700/50 flex-grow mt-4">
-              <div class="text-slate-600 dark:text-slate-300 text-sm">
-                <p>IP: ${ip}</p>
-                <p>Port: ${port}</p>
-              </div>
-            </div>
-            <div class="flex flex-col gap-2 mt-4 text-sm">
-              <div class="flex gap-2 justify-around w-full">
-                <button class="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-md p-2 w-full text-white font-semibold transition-colors duration-200" onclick="copyToClipboard('${trojanTLS}')">TROJAN TLS</button>
-                <button class="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-md p-2 w-full text-white font-semibold transition-colors duration-200" onclick="copyToClipboard('${vlessTLS}')">VLESS TLS</button>
-              </div>
-              <!-- Tambah tombol lain sesuai pola config -->
-            </div>
-          `;
-          container.appendChild(card);
-        });
-      }
-
-      async function loadAll() {
-        try {
-          const res = await fetch('https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/kvProxyList.json');
-          if (!res.ok) throw new Error('proxylist.json not found');
-          const data = await res.json();
-
-          // Update sidebar flags
-          await loadSidebarFlags(data);
-
-          // Jika cc di query tidak ada di proxylist.json, pakai country pertama
-          if (!data[proxyCountry]) {
-            proxyCountry = Object.keys(data)[0];
-            // Update URL tanpa reload
-            window.history.replaceState({}, '', `?cc=${proxyCountry}`);
-          }
-
-          // Update grid proxy
-          await loadProxyList(data);
-        } catch (e) {
-          document.getElementById('proxy-list-container').innerHTML = `<div class="col-span-full text-center text-red-400">Gagal load proxylist.json</div>`;
-        }
-      }
-    </script>
-
-    <script>
-      // Shared
+      // --- Variabel Global dan DOM Elements ---
       const rootDomain = "nautica.zerostore.tech";
       const notification = document.getElementById("notification-badge");
       const windowContainer = document.getElementById("container-window");
       const windowInfoContainer = document.getElementById("container-window-info");
-      const converterUrl =
-        "https://script.google.com/macros/s/AKfycbwwVeHNUlnP92syOP82p1dOk_-xwBgRIxkTjLhxxZ5UXicrGOEVNc5JaSOu0Bgsx_gG/exec";
-    
-      // Switches
+  
+      // Ambil kode negara dari query string (?cc=PL) atau default ke "PL"
+      const urlParams = new URLSearchParams(window.location.search);
+      let proxyCountry = urlParams.get('cc') || "PL";
+      
+      // --- Variabel State Aplikasi ---
+      let availableCountries = [];
       let isDomainListFetched = false;
-    
-      // Local variable
-      let rawConfig = "";
-    
-      function getDomainList() {
-        if (isDomainListFetched) return;
-        isDomainListFetched = true;
-    
-        windowInfoContainer.innerText = "Fetching data...";
-    
-        const url = "https://" + rootDomain + "/api/v1/domains/get";
-        const res = fetch(url).then(async (res) => {
-          const domainListContainer = document.getElementById("container-domains");
-          domainListContainer.innerHTML = "";
-    
-          if (res.status == 200) {
-            windowInfoContainer.innerText = "Done!";
-            const respJson = await res.json();
-            for (const domain of respJson) {
-              const domainElement = document.createElement("p");
-              domainElement.classList.add("w-full", "bg-amber-400", "rounded-md");
-              domainElement.innerText = domain;
-              domainListContainer.appendChild(domainElement);
-            }
-          } else {
-            windowInfoContainer.innerText = "Failed!";
+      let rawConfig = ""; // Menyimpan konfigurasi mentah yang akan disalin
+  
+      // --- Fungsi Utama untuk Memuat Data Proxy ---
+  
+      function loadSidebarFlags(data) {
+          const sidebar = document.getElementById('sidebar-flags');
+          sidebar.innerHTML = ''; // Kosongkan sidebar sebelum diisi
+          availableCountries = Object.keys(data);
+  
+          availableCountries.forEach(cc => {
+              const a = document.createElement('a');
+              a.href = `?cc=${cc}`; // Cukup ubah query string, tidak perlu path
+              a.className = "py-1";
+              a.innerHTML = `<img width=20 src="https://hatscripts.github.io/circle-flags/flags/${cc.toLowerCase()}.svg" alt="${cc}" />`;
+              sidebar.appendChild(a);
+          });
+      }
+  
+      function loadProxyList(data) {
+          const proxies = data[proxyCountry] || [];
+          const container = document.getElementById('proxy-list-container');
+          container.innerHTML = ''; // Kosongkan kontainer sebelum diisi
+  
+          if (proxies.length === 0) {
+              container.innerHTML = `<div class="col-span-full text-center text-red-400">No proxy found for country code <b>${proxyCountry}</b></div>`;
+              return;
           }
-        });
+  
+          proxies.forEach((proxy, idx) => {
+              const [ip, port] = proxy.split(':');
+              const path = `/${ip}-${port}`;
+              const hostAndSni = "nautica.zerostore.tech";
+              const uuid = "245ad464-108b-42c2-bc68-0d98a8b1a690";
+  
+              // Pola konfigurasi
+              const vlessTLS = `vless://${uuid}@${hostAndSni}:443?encryption=none&type=ws&host=${hostAndSni}&path=${encodeURIComponent(path)}&security=tls&sni=${hostAndSni}#VLESS-TLS-${ip}-${port}`;
+              const trojanTLS = `trojan://${uuid}@${hostAndSni}:443?encryption=none&type=ws&host=${hostAndSni}&path=${encodeURIComponent(path)}&security=tls&sni=${hostAndSni}#TROJAN-TLS-${ip}-${port}`;
+              
+              const card = document.createElement('div');
+              card.className = "lozad scale-95 mb-4 bg-white dark:bg-slate-800 transition-all duration-300 rounded-lg p-6 flex flex-col shadow-md hover:shadow-lg border border-slate-200 dark:border-slate-700 hover:scale-105";
+              
+              card.innerHTML = `
+                  <div id="countryFlag" class="absolute -translate-y-11 -translate-x-2 border-4 border-white dark:border-slate-800 rounded-full overflow-hidden">
+                      <img width="48" src="https://hatscripts.github.io/circle-flags/flags/${proxyCountry.toLowerCase()}.svg" alt="${proxyCountry}" />
+                  </div>
+                  <div class="flex-grow">
+                      <div id="ping-${idx}" data-target="${ip}:${port}" class="animate-pulse text-xs font-semibold text-slate-500 dark:text-slate-400 text-right">Idle ${ip}:${port}</div>
+                  </div>
+                  <div class="rounded-lg py-4 px-4 bg-slate-50 dark:bg-slate-700/50 flex-grow mt-4">
+                      <div class="text-slate-600 dark:text-slate-300 text-sm">
+                          <p>IP: ${ip}</p>
+                          <p>Port: ${port}</p>
+                      </div>
+                  </div>
+                  <div class="flex flex-col gap-2 mt-4 text-sm">
+                      <div class="flex gap-2 justify-around w-full">
+                          <button class="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-md p-2 w-full text-white font-semibold transition-colors duration-200" onclick="showCopyOptions('${trojanTLS}')">TROJAN TLS</button>
+                          <button class="bg-indigo-500 hover:bg-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 rounded-md p-2 w-full text-white font-semibold transition-colors duration-200" onclick="showCopyOptions('${vlessTLS}')">VLESS TLS</button>
+                      </div>
+                      <!-- Tambah tombol lain sesuai pola config -->
+                  </div>
+              `;
+              container.appendChild(card);
+          });
       }
-    
-      function registerDomain() {
-        const domainInputElement = document.getElementById("new-domain-input");
-        const rawDomain = domainInputElement.value.toLowerCase();
-        const domain = domainInputElement.value + "." + rootDomain;
-    
-        if (!rawDomain.match(/\w+\.\w+$/) || rawDomain.endsWith(rootDomain)) {
-          windowInfoContainer.innerText = "Invalid URL!";
-          return;
-        }
-    
-        windowInfoContainer.innerText = "Pushing request...";
-    
-        const url = "https://" + rootDomain + "/api/v1/domains/put?domain=" + domain;
-        const res = fetch(url).then((res) => {
-          if (res.status == 200) {
-            windowInfoContainer.innerText = "Done!";
-            domainInputElement.value = "";
-            isDomainListFetched = false;
-            getDomainList();
-          } else {
-            if (res.status == 409) {
-              windowInfoContainer.innerText = "Domain exists!";
-            } else {
-              windowInfoContainer.innerText = "Error " + res.status;
-            }
+  
+      async function loadAll() {
+          try {
+              const res = await fetch('https://raw.githubusercontent.com/FoolVPN-ID/Nautica/refs/heads/main/kvProxyList.json');
+              if (!res.ok) throw new Error('proxylist.json not found');
+              const data = await res.json();
+  
+              // Update sidebar flags
+              loadSidebarFlags(data);
+  
+              // Jika cc di query tidak ada di proxylist.json, pakai country pertama
+              if (!data[proxyCountry]) {
+                  proxyCountry = Object.keys(data)[0] || "PL";
+                  // Update URL tanpa reload halaman
+                  const newUrl = `${window.location.pathname}?cc=${proxyCountry}`;
+                  window.history.replaceState({ path: newUrl }, '', newUrl);
+              }
+  
+              // Update grid proxy
+              loadProxyList(data);
+  
+              // Setelah daftar proxy dimuat, jalankan pengecekan ping
+              checkAllProxies();
+  
+          } catch (e) {
+              console.error("Failed to load proxy list:", e);
+              document.getElementById('proxy-list-container').innerHTML = `<div class="col-span-full text-center text-red-400">Gagal memuat proxylist.json</div>`;
           }
-        });
       }
-    
-      function copyToClipboard(text) {
-        toggleOutputWindow();
-        rawConfig = text;
-      }
-    
-      function copyToClipboardAsRaw() {
-        navigator.clipboard.writeText(rawConfig);
-    
-        notification.classList.remove("opacity-0");
-        setTimeout(() => {
-          notification.classList.add("opacity-0");
-        }, 2000);
-      }
-    
-      async function copyToClipboardAsTarget(target) {
-        windowInfoContainer.innerText = "Generating config...";
-        const url = "https://api.foolvpn.me/convert";
-        const res = await fetch(url, {
-          method: "POST",
-          body: JSON.stringify({
-            url: rawConfig,
-            format: target,
-            template: "cf",
-          }),
-        });
-    
-        if (res.status == 200) {
-          windowInfoContainer.innerText = "Done!";
-          navigator.clipboard.writeText(await res.text());
-    
-          notification.classList.remove("opacity-0");
-          setTimeout(() => {
-            notification.classList.add("opacity-0");
-          }, 2000);
-        } else {
-          windowInfoContainer.innerText = "Error " + res.statusText;
-        }
-      }
-    
-      function navigateTo(link) {
-        window.location.href = link + window.location.search;
-      }
-    
-      function toggleOutputWindow() {
-        windowInfoContainer.innerText = "Select output:";
-        toggleWindow();
-        const rootElement = document.getElementById("output-window");
-        if (rootElement.classList.contains("hidden")) {
-          rootElement.classList.remove("hidden");
-        } else {
-          rootElement.classList.add("hidden");
-        }
-      }
-    
-      function toggleWildcardsWindow() {
-        windowInfoContainer.innerText = "Domain list";
-        toggleWindow();
-        getDomainList();
-        const rootElement = document.getElementById("wildcards-window");
-        if (rootElement.classList.contains("hidden")) {
-          rootElement.classList.remove("hidden");
-        } else {
-          rootElement.classList.add("hidden");
-        }
-      }
-    
-      function toggleWindow() {
-        if (windowContainer.classList.contains("hidden")) {
-          windowContainer.classList.remove("hidden");
-        } else {
-          windowContainer.classList.add("hidden");
-        }
-      }
-    
-      function toggleDarkMode() {
-        const rootElement = document.getElementById("html");
-        if (rootElement.classList.contains("dark")) {
-          rootElement.classList.remove("dark");
-        } else {
-          rootElement.classList.add("dark");
-        }
-      }
-    
-      function checkProxy() {
-        for (let i = 0; ; i++) {
-          const pingElement = document.getElementById("ping-"+i);
-          if (pingElement == undefined) return;
-    
-          const target = pingElement.textContent.split(" ").filter((ipPort) => ipPort.match(":"))[0];
-          if (target) {
-            pingElement.textContent = "Checking...";
-          } else {
-            continue;
-          }
-    
-          let isActive = false;
-          new Promise(async (resolve) => {
-            const res = await fetch("https://nautica.zerostore.tech/check?target=" + target)
-              .then(async (res) => {
-                if (isActive) return;
-                if (res.status == 200) {
-                  pingElement.classList.remove("dark:text-white");
+  
+      // --- Fungsi Pengecekan (Proxy, GeoIP, dll) ---
+  
+      async function pingProxy(pingElement, target) {
+          if (!target) return;
+  
+          pingElement.textContent = "Checking...";
+          pingElement.classList.remove('text-green-600', 'text-red-600', 'animate-pulse');
+  
+          try {
+              const res = await fetch(`https://nautica.zerostore.tech/check?target=${target}`);
+              if (res.ok) {
                   const jsonResp = await res.json();
                   if (jsonResp.proxyip === true) {
-                    isActive = true;
-                    pingElement.textContent = "Active " + jsonResp.delay + " ms " + "(" + jsonResp.colo + ")";
-                    pingElement.classList.add("text-green-600");
+                      pingElement.textContent = `Active ${jsonResp.delay} ms (${jsonResp.colo})`;
+                      pingElement.classList.add("text-green-600");
                   } else {
-                    pingElement.textContent = "Inactive";
-                    pingElement.classList.add("text-red-600");
+                      pingElement.textContent = "Inactive";
+                      pingElement.classList.add("text-red-600");
                   }
-                } else {
+              } else {
                   pingElement.textContent = "Check Failed!";
-                }
-              })
-              .finally(() => {
-                resolve(0);
-              });
-          });
-        }
-      }
-    
-      function checkRegion() {
-        for (let i = 0; ; i++) {
-          const containerRegionCheck = document.getElementById("container-region-check-" + i);
-          const configSample = document.getElementById("config-sample-" + i)?.value.replaceAll(" ", "");
-          if (containerRegionCheck == undefined) break;
-    
-          const res = fetch(
-            "https://api.foolvpn.me/regioncheck?config=" + encodeURIComponent(configSample)
-          ).then(async (res) => {
-            if (res.status == 200) {
-              containerRegionCheck.innerHTML = "<hr>";
-              for (const result of await res.json()) {
-                containerRegionCheck.innerHTML += "<p>" + result.name + ": " + result.region + "</p>";
+                  pingElement.classList.add("text-red-600");
               }
-            }
-          });
-        }
-      }
-    
-      function checkGeoip() {
-        const containerIP = document.getElementById("container-info-ip");
-        const containerCountry = document.getElementById("container-info-country");
-        const containerISP = document.getElementById("container-info-isp");
-        const res = fetch("https://" + rootDomain + "/api/v1/myip").then(async (res) => {
-          if (res.status == 200) {
-            const respJson = await res.json();
-            containerIP.innerText = "IP: " + respJson.ip;
-            containerCountry.innerText = "Country: " + respJson.country;
-            containerISP.innerText = "ISP: " + respJson.asOrganization;
+          } catch (error) {
+              pingElement.textContent = "Check Error!";
+              pingElement.classList.add("text-red-600");
           }
-        });
       }
-    
-      window.onload = () => {
-        loadAll();
-        checkGeoip();
-        checkProxy();
-        // checkRegion();
-        const observer = lozad(".lozad", {
-          load: function (el) {
-            el.classList.remove("scale-95");
-          },
-        });
-        observer.observe();
-      };
-    
-      window.onscroll = () => {
-        const paginationContainer = document.getElementById("container-pagination");
-    
-        if (window.innerHeight + Math.round(window.scrollY) >= document.body.offsetHeight) {
-          paginationContainer.classList.remove("-translate-y-6");
-        } else {
-          paginationContainer.classList.add("-translate-y-6");
-        }
-      };
-
+  
+      function checkAllProxies() {
+          const pingElements = document.querySelectorAll('[id^="ping-"]');
+          pingElements.forEach(element => {
+              const target = element.dataset.target;
+              pingProxy(element, target);
+          });
+      }
+      
+      async function checkGeoip() {
+          const containerIP = document.getElementById("container-info-ip");
+          const containerCountry = document.getElementById("container-info-country");
+          const containerISP = document.getElementById("container-info-isp");
+          try {
+              const res = await fetch(`https://${rootDomain}/api/v1/myip`);
+              if (res.ok) {
+                  const respJson = await res.json();
+                  containerIP.innerText = "IP: " + respJson.ip;
+                  containerCountry.innerText = "Country: " + respJson.country;
+                  containerISP.innerText = "ISP: " + respJson.asOrganization;
+              }
+          } catch (error) {
+              console.error("Failed to fetch GeoIP:", error);
+              containerIP.innerText = "IP: Gagal memuat";
+          }
+      }
+      
+      // --- Fungsi Interaksi (Copy, Toggle, Navigasi) ---
+      
+      function showCopyOptions(config) {
+          toggleOutputWindow();
+          rawConfig = config;
+      }
+  
+      function copyToClipboardAsRaw() {
+          navigator.clipboard.writeText(rawConfig).then(() => {
+              showNotification();
+          });
+      }
+  
+      async function copyToClipboardAsTarget(target) {
+          windowInfoContainer.innerText = "Generating config...";
+          try {
+              const res = await fetch("https://api.foolvpn.me/convert", {
+                  method: "POST",
+                  body: JSON.stringify({ url: rawConfig, format: target, template: "cf" }),
+              });
+  
+              if (res.ok) {
+                  const configText = await res.text();
+                  navigator.clipboard.writeText(configText).then(() => {
+                      windowInfoContainer.innerText = "Done! Copied to clipboard.";
+                      showNotification();
+                  });
+              } else {
+                  windowInfoContainer.innerText = "Error " + res.statusText;
+              }
+          } catch (error) {
+              windowInfoContainer.innerText = "Request failed!";
+              console.error("Conversion API error:", error);
+          }
+      }
+      
+      function showNotification() {
+          notification.classList.remove("opacity-0");
+          setTimeout(() => {
+              notification.classList.add("opacity-0");
+          }, 2000);
+      }
+      
       function navigateTo(link) {
-        window.location.href = link + window.location.search;
+          window.location.href = link + window.location.search;
       }
+  
+      function toggleWindow() {
+          windowContainer.classList.toggle("hidden");
+      }
+  
+      function toggleOutputWindow() {
+          windowInfoContainer.innerText = "Select output:";
+          toggleWindow();
+          document.getElementById("output-window").classList.toggle("hidden");
+          document.getElementById("wildcards-window").classList.add("hidden");
+      }
+  
+      function toggleWildcardsWindow() {
+          windowInfoContainer.innerText = "Domain list";
+          toggleWindow();
+          getDomainList();
+          document.getElementById("wildcards-window").classList.toggle("hidden");
+          document.getElementById("output-window").classList.add("hidden");
+      }
+  
+      function toggleDarkMode() {
+          document.documentElement.classList.toggle("dark");
+      }
+      
+      // --- Fungsi Lain (Wildcard Domain, dll) ---
+  
+      async function getDomainList() {
+          if (isDomainListFetched) return;
+          isDomainListFetched = true;
+          windowInfoContainer.innerText = "Fetching data...";
+          
+          const domainListContainer = document.getElementById("container-domains");
+          domainListContainer.innerHTML = "";
+  
+          try {
+              const url = `https://${rootDomain}/api/v1/domains/get`;
+              const res = await fetch(url);
+              if (res.ok) {
+                  windowInfoContainer.innerText = "Done!";
+                  const respJson = await res.json();
+                  respJson.forEach(domain => {
+                      const domainElement = document.createElement("p");
+                      domainElement.className = "w-full bg-amber-400 rounded-md p-1 text-center";
+                      domainElement.innerText = domain;
+                      domainListContainer.appendChild(domainElement);
+                  });
+              } else {
+                  windowInfoContainer.innerText = `Failed! Status: ${res.status}`;
+              }
+          } catch (error) {
+              windowInfoContainer.innerText = "Failed to fetch domains!";
+              console.error("getDomainList error:", error);
+          }
+      }
+  
+      async function registerDomain() {
+          const domainInputElement = document.getElementById("new-domain-input");
+          const rawDomain = domainInputElement.value.trim().toLowerCase();
+  
+          if (!rawDomain || rawDomain.includes(" ") || !rawDomain.includes(".")) {
+              windowInfoContainer.innerText = "Invalid domain format!";
+              return;
+          }
+  
+          const domain = `${rawDomain}.${rootDomain}`;
+          windowInfoContainer.innerText = "Pushing request...";
+  
+          try {
+              const url = `https://${rootDomain}/api/v1/domains/put?domain=${domain}`;
+              const res = await fetch(url);
+              if (res.ok) {
+                  windowInfoContainer.innerText = "Done!";
+                  domainInputElement.value = "";
+                  isDomainListFetched = false;
+                  getDomainList(); // Refresh list
+              } else if (res.status === 409) {
+                  windowInfoContainer.innerText = "Domain exists!";
+              } else {
+                  windowInfoContainer.innerText = `Error ${res.status}`;
+              }
+          } catch (error) {
+              windowInfoContainer.innerText = "Request failed!";
+              console.error("registerDomain error:", error);
+          }
+      }
+  
+      // --- Event Listeners & Inisialisasi ---
+  
+      window.onload = () => {
+          loadAll();
+          checkGeoip();
+  
+          const observer = lozad(".lozad", {
+              load: (el) => el.classList.remove("scale-95"),
+          });
+          observer.observe();
+      };
+  
+      window.onscroll = () => {
+          const paginationContainer = document.getElementById("container-pagination");
+          if (!paginationContainer) return;
+  
+          const isScrolledToBottom = window.innerHeight + Math.round(window.scrollY) >= document.body.offsetHeight;
+          if (isScrolledToBottom) {
+              paginationContainer.classList.remove("-translate-y-6");
+          } else {
+              paginationContainer.classList.add("-translate-y-6");
+          }
+      };
     </script>
-    
   </body>
 </html>
